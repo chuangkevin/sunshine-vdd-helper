@@ -1,0 +1,6 @@
+*.zip
+release-check/
+state/
+VDD/
+MultiMonitorTool/
+*.log
