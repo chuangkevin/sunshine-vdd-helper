@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = 'C:\Program Files\SunshineVddHelper',
-  [string]$Resolution = '1920x1080',
+  [string]$Resolution = 'auto',
   [string]$RefreshRate = '60'
 )
 
@@ -73,9 +73,13 @@ if (-not (Test-Path -LiteralPath $mmtExe)) { Expand-Archive -LiteralPath $mmtZip
   <gpu><friendlyname>default</friendlyname></gpu>
   <global><g_refresh_rate>60</g_refresh_rate><g_refresh_rate>90</g_refresh_rate><g_refresh_rate>120</g_refresh_rate><g_refresh_rate>144</g_refresh_rate></global>
   <resolutions>
+    <resolution><width>640</width><height>480</height><refresh_rate>60</refresh_rate></resolution>
     <resolution><width>1280</width><height>720</height><refresh_rate>60</refresh_rate></resolution>
     <resolution><width>1920</width><height>1080</height><refresh_rate>60</refresh_rate></resolution>
+    <resolution><width>2400</width><height>1080</height><refresh_rate>60</refresh_rate></resolution>
+    <resolution><width>2556</width><height>1179</height><refresh_rate>60</refresh_rate></resolution>
     <resolution><width>2560</width><height>1440</height><refresh_rate>60</refresh_rate></resolution>
+    <resolution><width>3200</width><height>1440</height><refresh_rate>60</refresh_rate></resolution>
     <resolution><width>3840</width><height>2160</height><refresh_rate>60</refresh_rate></resolution>
   </resolutions>
   <options><CustomEdid>false</CustomEdid><PreventSpoof>false</PreventSpoof><EdidCeaOverride>false</EdidCeaOverride><HardwareCursor>true</HardwareCursor><SDR10bit>false</SDR10bit><HDRPlus>false</HDRPlus><logging>false</logging><debuglogging>false</debuglogging></options>
@@ -135,16 +139,31 @@ function GetVddId { `$raw = Get-Content `$SunshineLog -Raw -Encoding UTF8; `$ms 
 Restart-Service SunshineService -Force
 Start-Sleep 8
 `$id = GetVddId
-if (`$id) { SetConfig 'output_name' `$id; Restart-Service SunshineService -Force }
+if (`$id) {
+  SetConfig 'output_name' `$id
+  SetConfig 'dd_configuration_option' 'ensure_primary'
+  SetConfig 'dd_resolution_option' 'auto'
+  SetConfig 'dd_refresh_rate_option' 'auto'
+  SetConfig 'dd_hdr_option' 'disabled'
+  Restart-Service SunshineService -Force
+}
 "@ | Set-Content -LiteralPath $initScript -Encoding UTF8
 
 $prep = '[{"do":"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"' + ($streamScript -replace '\\', '\\') + '\" start","undo":"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"' + ($streamScript -replace '\\', '\\') + '\" stop"}]'
 SetConfig 'global_prep_cmd' $prep
 SetConfig 'dd_configuration_option' 'ensure_primary'
-SetConfig 'dd_resolution_option' 'manual'
-SetConfig 'dd_manual_resolution' $Resolution
-SetConfig 'dd_refresh_rate_option' 'manual'
-SetConfig 'dd_manual_refresh_rate' $RefreshRate
+if ($Resolution -eq 'auto') {
+  SetConfig 'dd_resolution_option' 'auto'
+} else {
+  SetConfig 'dd_resolution_option' 'manual'
+  SetConfig 'dd_manual_resolution' $Resolution
+}
+if ($RefreshRate -eq 'auto') {
+  SetConfig 'dd_refresh_rate_option' 'auto'
+} else {
+  SetConfig 'dd_refresh_rate_option' 'manual'
+  SetConfig 'dd_manual_refresh_rate' $RefreshRate
+}
 SetConfig 'dd_hdr_option' 'disabled'
 SetConfig 'dd_config_revert_on_disconnect' 'enabled'
 SetConfig 'dd_config_revert_delay' '1500'
