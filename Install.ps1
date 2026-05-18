@@ -1,7 +1,8 @@
 param(
   [string]$InstallDir = 'C:\Program Files\SunshineVddHelper',
-  [string]$Resolution = 'auto',
-  [string]$RefreshRate = '60'
+  [string]$Resolution = '1920x1080',
+  [string]$RefreshRate = '60',
+  [switch]$AutoResolution
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,7 +19,9 @@ function IsAdmin {
 }
 
 if (-not (IsAdmin)) {
-  Start-Process powershell.exe -Verb RunAs -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath, '-InstallDir', $InstallDir, '-Resolution', $Resolution, '-RefreshRate', $RefreshRate)
+  $argsList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath, '-InstallDir', $InstallDir, '-Resolution', $Resolution, '-RefreshRate', $RefreshRate)
+  if ($AutoResolution) { $argsList += '-AutoResolution' }
+  Start-Process powershell.exe -Verb RunAs -ArgumentList $argsList
   exit
 }
 
@@ -142,8 +145,15 @@ Start-Sleep 8
 if (`$id) {
   SetConfig 'output_name' `$id
   SetConfig 'dd_configuration_option' 'ensure_primary'
-  SetConfig 'dd_resolution_option' 'auto'
-  SetConfig 'dd_refresh_rate_option' 'auto'
+  if ('$AutoResolution' -eq 'True') {
+    SetConfig 'dd_resolution_option' 'auto'
+    SetConfig 'dd_refresh_rate_option' 'auto'
+  } else {
+    SetConfig 'dd_resolution_option' 'manual'
+    SetConfig 'dd_manual_resolution' '$Resolution'
+    SetConfig 'dd_refresh_rate_option' 'manual'
+    SetConfig 'dd_manual_refresh_rate' '$RefreshRate'
+  }
   SetConfig 'dd_hdr_option' 'disabled'
   Restart-Service SunshineService -Force
 }
@@ -152,13 +162,13 @@ if (`$id) {
 $prep = '[{"do":"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"' + ($streamScript -replace '\\', '\\') + '\" start","undo":"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"' + ($streamScript -replace '\\', '\\') + '\" stop"}]'
 SetConfig 'global_prep_cmd' $prep
 SetConfig 'dd_configuration_option' 'ensure_primary'
-if ($Resolution -eq 'auto') {
+if ($AutoResolution) {
   SetConfig 'dd_resolution_option' 'auto'
 } else {
   SetConfig 'dd_resolution_option' 'manual'
   SetConfig 'dd_manual_resolution' $Resolution
 }
-if ($RefreshRate -eq 'auto') {
+if ($AutoResolution) {
   SetConfig 'dd_refresh_rate_option' 'auto'
 } else {
   SetConfig 'dd_refresh_rate_option' 'manual'
